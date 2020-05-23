@@ -56,6 +56,7 @@ MONGOC_DRIVER_DIR=""
 MONGOC_DRIVER_CURRENT_VERSION=""
 XCASH_DPOPS_PACKAGES="build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libminiupnpc-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev libgtest-dev doxygen graphviz libpcsclite-dev git screen p7zip-full"
 CURRENT_XCASH_WALLET_INFORMATION=""
+DAEMON_SEED="usseed1.x-cash.org:18281"
 
 # Files
 FIREWALL=""
@@ -80,14 +81,13 @@ regex_DPOPS_FEE="\b(^[1-9]{1}[0-9]{0,1}.?[0-9]{0,6}$)\b$" # between 1 and 99 wit
 regex_DPOPS_MINIMUM_AMOUNT="\b(^[1-9]{1}[0-9]{4,6}$)\b$" # between 10000 and 10000000-1
 
 
-
 # Functions
 function get_installation_settings()
 {
   echo -ne "${COLOR_PRINT_YELLOW}Installation Type (Install)\n1 = Install\n2 = Update\n3 = Uninstall\n4 = Install / Update Blockchain\n5 = Change Solo Delegate or Shared Delegate\n6 = Edit Shared Delegate Settings\n7 = Restart Programs\n8 = Stop Programs\n9 = Test Update\n10 = Test Update Reset Delegates\n11 = Firewall\n12 = Shared Delegates Firewall\nEnter the number of the installation type: ${END_COLOR_PRINT}"
   read -r data
   INSTALLATION_TYPE_SETTINGS=$([ "$data" == "2" ] || [ "$data" == "3" ] || [ "$data" == "4" ] || [ "$data" == "5" ] || [ "$data" == "6" ] || [ "$data" == "7" ] || [ "$data" == "8" ] || [ "$data" == "9" ] || [ "$data" == "10" ] || [ "$data" == "11" ] || [ "$data" == "12" ] && echo "$data" || echo "1")
-  INSTALLATION_TYPE=$([ "$INSTALLATION_TYPE_SETTINGS" == "1" ] && echo "Installation" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "2" ] && echo "Update" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "3" ] && echo "Uninstall" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "4" ] && echo "Blockchain" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "5" ] && echo "solo or shared delegate" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "6" ] && echo "EditSharedDelegateSettings" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "7" ] && echo "Restart" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "8" ] && echo "Stop" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "9" ] && echo "Test" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "10" ] && echo "Test_Reset_Delegates" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "11" ] && echo "Firewall" &>/dev/null) || ([ "$INSTALLATION_TYPE_SETTINGS" == "12" ] && echo "Shared_Delegates_Firewall" &>/dev/null)
+  INSTALLATION_TYPE=$([ "$INSTALLATION_TYPE_SETTINGS" == "1" ] && echo "Installation") || ([ "$INSTALLATION_TYPE_SETTINGS" == "2" ] && echo "Update") || ([ "$INSTALLATION_TYPE_SETTINGS" == "3" ] && echo "Uninstall") || ([ "$INSTALLATION_TYPE_SETTINGS" == "4" ] && echo "Blockchain") || ([ "$INSTALLATION_TYPE_SETTINGS" == "5" ] && echo "solo or shared delegate") || ([ "$INSTALLATION_TYPE_SETTINGS" == "6" ] && echo "EditSharedDelegateSettings") || ([ "$INSTALLATION_TYPE_SETTINGS" == "7" ] && echo "Restart") || ([ "$INSTALLATION_TYPE_SETTINGS" == "8" ] && echo "Stop") || ([ "$INSTALLATION_TYPE_SETTINGS" == "9" ] && echo "Test") || ([ "$INSTALLATION_TYPE_SETTINGS" == "10" ] && echo "Test_Reset_Delegates") || ([ "$INSTALLATION_TYPE_SETTINGS" == "11" ] && echo "Firewall") || ([ "$INSTALLATION_TYPE_SETTINGS" == "12" ] && echo "Shared_Delegates_Firewall")
   echo -ne "\r"
   echo
   # Check if XCASH_DPOPS is already installed, if the user choose to install
@@ -114,16 +114,26 @@ function get_installation_settings()
   fi
 }
 
+function get_xcash_seed_url()
+{
+  PS3="Select a seed that fits the region of your delegate:"
+  select SEED in "usseed1.x-cash.org:18281" "usseed2.x-cash.org:18281" "euseed1.x-cash.org:18281" "euseed3.x-cash.org:18281" "asiaseed2.x-cash.org:18281"
+  do
+    DAEMON_SEED=SEED
+    break;
+  done
+}
+
 function get_xcash_dpops_installation_directory()
 {
   while
     echo -ne "${COLOR_PRINT_YELLOW}Installation Directory, must be in the form of /directory/ ($HOME/x-network/): ${END_COLOR_PRINT}"
-    read -r data    
+    read -r data
     echo -ne "\r"
     echo
     [[ ! $data =~ $regex_XCASH_DPOPS_INSTALLATION_DIR ]]
   do true; done
-  
+
   XCASH_DPOPS_INSTALLATION_DIR=$([ "$data" == "" ] && echo "$XCASH_DPOPS_INSTALLATION_DIR" || echo "$data")
 }
 
@@ -173,7 +183,7 @@ function get_shared_delegate_installation_settings()
   SHARED_DELEGATE=$([ "$data" == "" ] && echo "${SHARED_DELEGATE^^}" || echo "NO")
   echo -ne "\r"
   echo
-  if [ "${SHARED_DELEGATE^^}" == "YES" ]; then    
+  if [ "${SHARED_DELEGATE^^}" == "YES" ]; then
     while
       echo -ne "${COLOR_PRINT_YELLOW}Shared Delegate Fee (in percentage ex: 1 or 1.5 etc): ${END_COLOR_PRINT}"
       read -r DPOPS_FEE
@@ -181,7 +191,7 @@ function get_shared_delegate_installation_settings()
       echo
       [[ ! $DPOPS_FEE =~ $regex_DPOPS_FEE ]]
     do true; done
-    
+
     while
       echo -ne "${COLOR_PRINT_YELLOW}Shared Delegate Minimum Payment Amount, minimum is 10K, maximum is 10M (ex: 10000 in whole numbers and not atomic units etc): ${END_COLOR_PRINT}"
       read -r DPOPS_MINIMUM_AMOUNT
@@ -199,7 +209,7 @@ FIREWALL="$(cat << EOF
 #!/bin/sh
 # iptables script for server
 # if you changed any default ports change them in the firewall as well
- 
+
 # ACCEPT all packets at the top so each packet runs through the firewall rules, then DROP all INPUT and FORWARD if they dont use any of the firewall settings
 iptables -P INPUT ACCEPT
 iptables -P FORWARD ACCEPT
@@ -213,7 +223,7 @@ iptables -t raw -F
 iptables -t raw -X
 iptables -F
 iptables -X
- 
+
 # ip table prerouting data (this is where you want to block ddos attacks)
 # Drop all invalid packets
 iptables -t mangle -A PREROUTING -m conntrack --ctstate INVALID -j DROP
@@ -233,13 +243,13 @@ iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL NONE -j DROP
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL FIN,PSH,URG -j DROP
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL SYN,FIN,PSH,URG -j DROP
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL SYN,RST,ACK,FIN,URG -j DROP
- 
+
 # filter data for INPUT, FORWARD, and OUTPUT
 # Accept any packets coming or going on localhost
 iptables -I INPUT -i lo -j ACCEPT
 # keep already established connections running
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- 
+
 # block ip spoofing. these are the ranges of local IP address.
 iptables -A INPUT -s 45.76.169.83 -j DROP
 iptables -A INPUT -s 10.0.0.0/8 -j DROP
@@ -255,10 +265,10 @@ iptables -A INPUT -s 0.0.0.0/8 -j DROP
 iptables -A INPUT -d 0.0.0.0/8 -j DROP
 iptables -A INPUT -d 239.255.255.0/24 -j DROP
 iptables -A INPUT -d 255.255.255.255 -j DROP
- 
+
 # block all traffic from ip address (iptables -A INPUT -s ipaddress -j DROP)
 #unblock them using iptables -D INPUT -s ipaddress -j DROP
- 
+
 # Block different attacks
 # block one computer from opening too many connections (100 simultaneous connections) if this gives trouble with post remove this or increase the limit
 # iptables -t filter -I INPUT -p tcp --syn --dport 80 -m connlimit --connlimit-above 100 --connlimit-mask 32 -j DROP
@@ -269,27 +279,27 @@ iptables -A INPUT -m recent --name portscan --rcheck --seconds 86400 -j DROP
 iptables -A FORWARD -m recent --name portscan --rcheck --seconds 86400 -j DROP
 iptables -A INPUT -m recent --name portscan --remove
 iptables -A FORWARD -m recent --name portscan --remove
-iptables -A INPUT   -p tcp -m tcp -m multiport --destination-ports 21,25,110,135,139,143,445,1433,3306,3389 -m recent --name portscan --set -j DROP 
+iptables -A INPUT   -p tcp -m tcp -m multiport --destination-ports 21,25,110,135,139,143,445,1433,3306,3389 -m recent --name portscan --set -j DROP
 iptables -A FORWARD -p tcp -m tcp -m multiport --destination-ports 21,25,110,135,139,143,445,1433,3306,3389 -m recent --name portscan --set -j DROP
- 
+
 # Accept specific packets
 # Accept ICMP
 iptables -A INPUT -p icmp -j ACCEPT
- 
+
 # Accept HTTP
 # iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 
- 
+
 # Accept XCASH
 iptables -A INPUT -p tcp --dport 18280 -j ACCEPT
 iptables -A INPUT -p tcp --dport 18281 -j ACCEPT
 iptables -A INPUT -p tcp --dport 18283 -j ACCEPT
- 
+
 # Allow ssh (allow 10 login attempts in 1 hour from the same ip, if more than ban them for 1 hour)
 iptables -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -m recent --set --name DEFAULT --rsource
 iptables -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -m recent --update --seconds 3600 --hitcount 10 --name DEFAULT --rsource -j DROP
 iptables -A INPUT -p tcp -m tcp --dport 22 -j ACCEPT
- 
+
 # DROP all INPUT and FORWARD packets if they have reached this point
 iptables -A INPUT -j DROP
 iptables -A FORWARD -j DROP
@@ -299,7 +309,7 @@ FIREWALL_SHARED_DELEGATES="$(cat << EOF
 #!/bin/sh
 # iptables script for server
 # if you changed any default ports change them in the firewall as well
- 
+
 # ACCEPT all packets at the top so each packet runs through the firewall rules, then DROP all INPUT and FORWARD if they dont use any of the firewall settings
 iptables -P INPUT ACCEPT
 iptables -P FORWARD ACCEPT
@@ -313,7 +323,7 @@ iptables -t raw -F
 iptables -t raw -X
 iptables -F
 iptables -X
- 
+
 # ip table prerouting data (this is where you want to block ddos attacks)
 # Drop all invalid packets
 iptables -t mangle -A PREROUTING -m conntrack --ctstate INVALID -j DROP
@@ -333,13 +343,13 @@ iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL NONE -j DROP
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL FIN,PSH,URG -j DROP
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL SYN,FIN,PSH,URG -j DROP
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL SYN,RST,ACK,FIN,URG -j DROP
- 
+
 # filter data for INPUT, FORWARD, and OUTPUT
 # Accept any packets coming or going on localhost
 iptables -I INPUT -i lo -j ACCEPT
 # keep already established connections running
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- 
+
 # block ip spoofing. these are the ranges of local IP address.
 iptables -A INPUT -s 45.76.169.83 -j DROP
 iptables -A INPUT -s 10.0.0.0/8 -j DROP
@@ -355,10 +365,10 @@ iptables -A INPUT -s 0.0.0.0/8 -j DROP
 iptables -A INPUT -d 0.0.0.0/8 -j DROP
 iptables -A INPUT -d 239.255.255.0/24 -j DROP
 iptables -A INPUT -d 255.255.255.255 -j DROP
- 
+
 # block all traffic from ip address (iptables -A INPUT -s ipaddress -j DROP)
 #unblock them using iptables -D INPUT -s ipaddress -j DROP
- 
+
 # Block different attacks
 # block one computer from opening too many connections (100 simultaneous connections) if this gives trouble with post remove this or increase the limit
 iptables -t filter -I INPUT -p tcp --syn --dport 80 -m connlimit --connlimit-above 100 --connlimit-mask 32 -j DROP
@@ -369,30 +379,30 @@ iptables -A INPUT -m recent --name portscan --rcheck --seconds 86400 -j DROP
 iptables -A FORWARD -m recent --name portscan --rcheck --seconds 86400 -j DROP
 iptables -A INPUT -m recent --name portscan --remove
 iptables -A FORWARD -m recent --name portscan --remove
-iptables -A INPUT   -p tcp -m tcp -m multiport --destination-ports 21,25,110,135,139,143,445,1433,3306,3389 -m recent --name portscan --set -j DROP 
+iptables -A INPUT   -p tcp -m tcp -m multiport --destination-ports 21,25,110,135,139,143,445,1433,3306,3389 -m recent --name portscan --set -j DROP
 iptables -A FORWARD -p tcp -m tcp -m multiport --destination-ports 21,25,110,135,139,143,445,1433,3306,3389 -m recent --name portscan --set -j DROP
- 
+
 # Accept specific packets
 # Accept ICMP
 iptables -A INPUT -p icmp -j ACCEPT
- 
+
 # Accept HTTP
 iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 
- 
+
 # Accept XCASH
 iptables -A INPUT -p tcp --dport 18280 -j ACCEPT
 iptables -A INPUT -p tcp --dport 18281 -j ACCEPT
 iptables -A INPUT -p tcp --dport 18283 -j ACCEPT
- 
+
 # Allow ssh (allow 10 login attempts in 1 hour from the same ip, if more than ban them for 1 hour)
 iptables -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -m recent --set --name DEFAULT --rsource
 iptables -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -m recent --update --seconds 3600 --hitcount 10 --name DEFAULT --rsource -j DROP
 iptables -A INPUT -p tcp -m tcp --dport 22 -j ACCEPT
- 
+
 # Redirect HTTP to port 18283
 iptables -A PREROUTING -t nat -p tcp --dport 80 -j REDIRECT --to-ports 18283
- 
+
 # DROP all INPUT and FORWARD packets if they have reached this point
 iptables -A INPUT -j DROP
 iptables -A FORWARD -j DROP
@@ -402,7 +412,7 @@ FIREWALL_TEST="$(cat << EOF
 #!/bin/sh
 # iptables script for server
 # if you changed any default ports change them in the firewall as well
- 
+
 # ACCEPT all packets at the top so each packet runs through the firewall rules, then DROP all INPUT and FORWARD if they dont use any of the firewall settings
 iptables -P INPUT ACCEPT
 iptables -P FORWARD ACCEPT
@@ -416,7 +426,7 @@ iptables -t raw -F
 iptables -t raw -X
 iptables -F
 iptables -X
- 
+
 # ip table prerouting data (this is where you want to block ddos attacks)
 # Drop all invalid packets
 iptables -t mangle -A PREROUTING -m conntrack --ctstate INVALID -j DROP
@@ -436,13 +446,13 @@ iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL NONE -j DROP
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL FIN,PSH,URG -j DROP
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL SYN,FIN,PSH,URG -j DROP
 iptables -t mangle -A PREROUTING -p tcp --tcp-flags ALL SYN,RST,ACK,FIN,URG -j DROP
- 
+
 # filter data for INPUT, FORWARD, and OUTPUT
 # Accept any packets coming or going on localhost
 iptables -I INPUT -i lo -j ACCEPT
 # keep already established connections running
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- 
+
 # block ip spoofing. these are the ranges of local IP address.
 iptables -A INPUT -s 45.76.169.83 -j DROP
 iptables -A INPUT -s 10.0.0.0/8 -j DROP
@@ -458,10 +468,10 @@ iptables -A INPUT -s 0.0.0.0/8 -j DROP
 iptables -A INPUT -d 0.0.0.0/8 -j DROP
 iptables -A INPUT -d 239.255.255.0/24 -j DROP
 iptables -A INPUT -d 255.255.255.255 -j DROP
- 
+
 # block all traffic from ip address (iptables -A INPUT -s ipaddress -j DROP)
 #unblock them using iptables -D INPUT -s ipaddress -j DROP
- 
+
 # Block different attacks
 # block one computer from opening too many connections (100 simultaneous connections) if this gives trouble with post remove this or increase the limit
 # iptables -t filter -I INPUT -p tcp --syn --dport 80 -m connlimit --connlimit-above 100 --connlimit-mask 32 -j DROP
@@ -472,27 +482,27 @@ iptables -A INPUT -m recent --name portscan --rcheck --seconds 86400 -j DROP
 iptables -A FORWARD -m recent --name portscan --rcheck --seconds 86400 -j DROP
 iptables -A INPUT -m recent --name portscan --remove
 iptables -A FORWARD -m recent --name portscan --remove
-iptables -A INPUT   -p tcp -m tcp -m multiport --destination-ports 21,25,110,135,139,143,445,1433,3306,3389 -m recent --name portscan --set -j DROP 
+iptables -A INPUT   -p tcp -m tcp -m multiport --destination-ports 21,25,110,135,139,143,445,1433,3306,3389 -m recent --name portscan --set -j DROP
 iptables -A FORWARD -p tcp -m tcp -m multiport --destination-ports 21,25,110,135,139,143,445,1433,3306,3389 -m recent --name portscan --set -j DROP
- 
+
 # Accept specific packets
 # Accept ICMP
 iptables -A INPUT -p icmp -j ACCEPT
- 
+
 # Accept HTTP
 # iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 
- 
+
 # Accept XCASH
 iptables -A INPUT -p tcp -s 147.135.68.247,54.36.63.49,195.201.169.57,195.201.169.59,54.255.223.94,136.243.102.93,78.46.213.190,88.198.90.83,116.202.180.102,116.203.71.44,116.203.71.47,116.203.71.60,116.203.71.36,116.203.71.48,116.203.71.45 --dport 18280 -j ACCEPT
 iptables -A INPUT -p tcp -s 147.135.68.247,54.36.63.49,195.201.169.57,195.201.169.59,54.255.223.94,136.243.102.93,78.46.213.190,88.198.90.83,116.202.180.102,116.203.71.44,116.203.71.47,116.203.71.60,116.203.71.36,116.203.71.48,116.203.71.45 --dport 18281 -j ACCEPT
 iptables -A INPUT -p tcp -s 147.135.68.247,54.36.63.49,195.201.169.57,195.201.169.59,54.255.223.94,136.243.102.93,78.46.213.190,88.198.90.83,116.202.180.102,116.203.71.44,116.203.71.47,116.203.71.60,116.203.71.36,116.203.71.48,116.203.71.45 --dport 18283 -j ACCEPT
- 
+
 # Allow ssh (allow 10 login attempts in 1 hour from the same ip, if more than ban them for 1 hour)
 iptables -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -m recent --set --name DEFAULT --rsource
 iptables -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -m recent --update --seconds 3600 --hitcount 10 --name DEFAULT --rsource -j DROP
 iptables -A INPUT -p tcp -m tcp --dport 22 -j ACCEPT
- 
+
 # DROP all INPUT and FORWARD packets if they have reached this point
 iptables -A INPUT -j DROP
 iptables -A FORWARD -j DROP
@@ -501,13 +511,13 @@ EOF
 SYSTEMD_SERVICE_FILE_FIREWALL="$(cat << EOF
 [Unit]
 Description=firewall
- 
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 User=root
 ExecStart=${HOME}/firewall_script.sh
- 
+
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -541,7 +551,7 @@ EOF
 SYSTEMD_SERVICE_FILE_XCASH_DAEMON="$(cat << EOF
 [Unit]
 Description=XCASH Daemon systemd file
- 
+
 [Service]
 Type=forking
 User=${USER}
@@ -549,7 +559,7 @@ PIDFile=${XCASH_DPOPS_INSTALLATION_DIR}systemdpid/xcash_daemon.pid
 ExecStart=${XCASH_DIR}build/release/bin/xcashd --data-dir ${XCASH_BLOCKCHAIN_INSTALLATION_DIR} --rpc-bind-ip 0.0.0.0 --p2p-bind-ip 0.0.0.0 --rpc-bind-port 18281 --restricted-rpc --confirm-external-bind --log-file ${XCASH_LOGS_DIR}XCASH_Daemon_log.txt --max-log-file-size 0 --detach --pidfile ${XCASH_SYSTEMPID_DIR}xcash_daemon.pid
 RuntimeMaxSec=15d
 Restart=always
- 
+
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -557,7 +567,7 @@ EOF
 SYSTEMD_SERVICE_FILE_XCASH_DPOPS_SOLO_DELEGATE="$(cat << EOF
 [Unit]
 Description=XCASH DPOPS
- 
+
 [Service]
 Type=simple
 LimitNOFILE=infinity
@@ -565,7 +575,7 @@ User=${USER}
 WorkingDirectory=${XCASH_DPOPS_DIR}build
 ExecStart=${XCASH_DPOPS_DIR}build/XCASH_DPOPS --block_verifiers_secret_key ${BLOCK_VERIFIER_SECRET_KEY}
 Restart=always
- 
+
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -573,7 +583,7 @@ EOF
 SYSTEMD_SERVICE_FILE_XCASH_DPOPS_SHARED_DELEGATE="$(cat << EOF
 [Unit]
 Description=XCASH DPOPS
- 
+
 [Service]
 Type=simple
 LimitNOFILE=infinity
@@ -581,7 +591,7 @@ User=${USER}
 WorkingDirectory=${XCASH_DPOPS_DIR}build
 ExecStart=${XCASH_DPOPS_DIR}build/XCASH_DPOPS --block_verifiers_secret_key ${BLOCK_VERIFIER_SECRET_KEY} --shared_delegates_website --fee ${DPOPS_FEE} --minimum_amount ${DPOPS_MINIMUM_AMOUNT}
 Restart=always
- 
+
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -589,13 +599,13 @@ EOF
 SYSTEMD_SERVICE_FILE_XCASH_WALLET="$(cat << EOF
 [Unit]
 Description=XCASH Wallet RPC
- 
+
 [Service]
 Type=simple
 User=${USER}
 ExecStart=${XCASH_DIR}build/release/bin/xcash-wallet-rpc --wallet-file ${XCASH_DPOPS_INSTALLATION_DIR}xcash_wallets/XCASH_DPOPS_WALLET --password ${WALLET_PASSWORD} --rpc-bind-port 18285 --confirm-external-bind --daemon-port 18281 --disable-rpc-login --trusted-daemon
 Restart=always
- 
+
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -701,7 +711,7 @@ function print_installation_settings()
     seconds=$((seconds-1))
     sleep 1
     echo -ne "\r"
-  done 
+  done
   echo -ne "${COLOR_PRINT_GREEN}${INSTALLATION_TYPE} will start in 0 seconds, press Ctrl + C to cancel!${END_COLOR_PRINT}"
   echo
   echo
@@ -718,10 +728,11 @@ function installation_settings()
   echo
   get_password
   get_installation_settings
-  if [ "$INSTALLATION_TYPE_SETTINGS" -eq "1" ]; then 
+  if [ "$INSTALLATION_TYPE_SETTINGS" -eq "1" ]; then
     get_xcash_dpops_installation_directory
     get_xcash_blockchain_xcash_dpops_installation_directory
     get_mongodb_installation_directory
+    get_xcash_seed_url
     update_global_variables
     get_shared_delegate_installation_settings
     get_wallet_settings
@@ -744,11 +755,11 @@ function get_current_xcash_wallet_data()
 {
   echo -ne "${COLOR_PRINT_YELLOW}Getting Current X-CASH Wallet Data${END_COLOR_PRINT}"
 
-  screen -dmS XCASH_RPC_Wallet "${XCASH_DIR}"build/release/bin/xcash-wallet-rpc --wallet-file "${XCASH_DPOPS_INSTALLATION_DIR}"xcash_wallets/XCASH_DPOPS_WALLET --password "${WALLET_PASSWORD}" --rpc-bind-port 18288 --confirm-external-bind --disable-rpc-login --daemon-address usseed1.x-cash.org:18281 --trusted-daemon
+  screen -dmS XCASH_RPC_Wallet "${XCASH_DIR}"build/release/bin/xcash-wallet-rpc --wallet-file "${XCASH_DPOPS_INSTALLATION_DIR}"xcash_wallets/XCASH_DPOPS_WALLET --password "${WALLET_PASSWORD}" --rpc-bind-port 18288 --confirm-external-bind --disable-rpc-login --daemon-address ${DAEMON_SEED} --trusted-daemon
   sleep 10s
-  
+
    while
-    data=$(curl -s -X POST http://127.0.0.1:18288/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_address"}' -H 'Content-Type: application/json') 
+    data=$(curl -s -X POST http://127.0.0.1:18288/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_address"}' -H 'Content-Type: application/json')
     sleep 10s
     [[ "$data" == "" ]]
   do true; done
@@ -759,13 +770,13 @@ function get_current_xcash_wallet_data()
   MNEMONIC_SEED=$(curl -s -X POST http://127.0.0.1:18288/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"query_key","params":{"key_type":"mnemonic"}}' -H 'Content-Type: application/json' | grep \"key\" | sed s"|    \"key\": ||g" | sed s"|\"||g")
   CURRENT_XCASH_WALLET_INFORMATION="${COLOR_PRINT_GREEN}############################################################\n                 X-CASH Wallet Data  \n############################################################${END_COLOR_PRINT}\n\n${COLOR_PRINT_YELLOW}Public Address: $PUBLIC_ADDRESS\nMnemonic Seed: $MNEMONIC_SEED\nSpend Key: $SPEND_KEY\nView Key: $VIEW_KEY\nWallet Password: $WALLET_PASSWORD\nBlock Verifiers Public Key: $BLOCK_VERIFIER_PUBLIC_KEY\nBlock Verifiers Secret Key: $BLOCK_VERIFIER_SECRET_KEY${END_COLOR_PRINT}"
 
-  curl -s -X POST http://127.0.0.1:18288/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"stop_wallet"}' -H 'Content-Type: application/json' &>/dev/null
+  curl -s -X POST http://127.0.0.1:18288/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"stop_wallet"}' -H 'Content-Type: application/json'
   sleep 10s
 
   # add the public address and block verifiers secret key to the XCASH_Daemon systemd service file
   PUBLIC_ADDRESS=${PUBLIC_ADDRESS%?}
-  sed -i "s/xcash-core\/build\/release\/bin\/xcashd/xcash-core\/build\/release\/bin\/xcashd --xcash-dpops-delegates-public-address $PUBLIC_ADDRESS --xcash-dpops-delegates-secret-key $BLOCK_VERIFIER_SECRET_KEY/g" /lib/systemd/system/XCASH_Daemon.service
-  
+  sudo sed -i "s/xcash-core\/build\/release\/bin\/xcashd/xcash-core\/build\/release\/bin\/xcashd --xcash-dpops-delegates-public-address $PUBLIC_ADDRESS --xcash-dpops-delegates-secret-key $BLOCK_VERIFIER_SECRET_KEY/g" /lib/systemd/system/XCASH_Daemon.service
+
   echo -ne "\r${COLOR_PRINT_GREEN}Getting Current X-CASH Wallet Data${END_COLOR_PRINT}"
   echo
 }
@@ -773,12 +784,12 @@ function get_current_xcash_wallet_data()
 function start_systemd_service_files()
 {
   echo -ne "${COLOR_PRINT_YELLOW}Starting Systemd Service Files${END_COLOR_PRINT}"
-  sudo systemctl start MongoDB &>/dev/null
-  sudo systemctl start XCASH_Daemon &>/dev/null
+  sudo systemctl start MongoDB
+  sudo systemctl start XCASH_Daemon
   sleep 30s
-  sudo systemctl start XCASH_Wallet &>/dev/null
+  sudo systemctl start XCASH_Wallet
   sleep 30s
-  sudo systemctl start XCASH_DPOPS &>/dev/null
+  sudo systemctl start XCASH_DPOPS
   echo -ne "\r${COLOR_PRINT_GREEN}Starting Systemd Service Files${END_COLOR_PRINT}"
   echo
 }
@@ -786,7 +797,7 @@ function start_systemd_service_files()
 function stop_systemd_service_files()
 {
   echo -ne "${COLOR_PRINT_YELLOW}Stoping Systemd Service Files${END_COLOR_PRINT}"
-  sudo systemctl stop MongoDB XCASH_Daemon XCASH_Wallet XCASH_DPOPS &>/dev/null
+  sudo systemctl stop MongoDB XCASH_Daemon XCASH_Wallet XCASH_DPOPS
   echo -ne "\r${COLOR_PRINT_GREEN}Stoping Systemd Service Files${END_COLOR_PRINT}"
   echo
 }
@@ -854,14 +865,14 @@ function check_if_upgrade_solo_delegate_and_shared_delegate()
         echo
         [[ ! $DPOPS_FEE =~ $regex_DPOPS_FEE ]]
       do true; done
-    
+
       while
         echo -ne "${COLOR_PRINT_YELLOW}Shared Delegate Minimum Payment Amount, minimum is 10K, maximum is 10M (ex: 10000 in whole numbers and not atomic units etc): ${END_COLOR_PRINT}"
         read -r DPOPS_MINIMUM_AMOUNT
         echo -ne "\r"
         echo
         [[ ! $DPOPS_MINIMUM_AMOUNT =~ $regex_DPOPS_MINIMUM_AMOUNT ]]
-      do true; done  
+      do true; done
 
       NODEJS_DIR=${XCASH_DPOPS_INSTALLATION_DIR}${NODEJS_LATEST_VERSION}/
       install_shared_delegates_website
@@ -875,11 +886,11 @@ function check_if_upgrade_solo_delegate_and_shared_delegate()
 }
 
 function check_ubuntu_version()
-{   
+{
     command -v lsb_release > /dev/null 2>&1 ||
     {
         echo -e "${COLOR_PRINT_RED}FAIL${END_COLOR_PRINT}"
-        echo 
+        echo
         echo -e "${COLOR_PRINT_RED}############################################################${END_COLOR_PRINT}"
         echo -e "${COLOR_PRINT_RED}           !!! CANNOT CHECK YOUR UBUNTU VERSION !!!${END_COLOR_PRINT}"
         echo -e "${COLOR_PRINT_RED}############################################################${END_COLOR_PRINT}"
@@ -890,7 +901,7 @@ function check_ubuntu_version()
     UBUNTU_VERSION=$(lsb_release -r | awk '{print $2}' | sed s"|\.||g")
     if [ "$UBUNTU_VERSION" -lt 1804 ]; then
       echo -e "${COLOR_PRINT_RED}FAIL${END_COLOR_PRINT}"
-      echo 
+      echo
       echo -e "${COLOR_PRINT_RED}############################################################${END_COLOR_PRINT}"
       echo -e "${COLOR_PRINT_RED}          !!!  YOUR UBUNTU VERSION IS NOT SUPPORTED !!!${END_COLOR_PRINT}"
       echo -e "${COLOR_PRINT_RED}############################################################${END_COLOR_PRINT}"
@@ -909,12 +920,12 @@ function update_packages_list()
             2 ) j="|" ;;
             3 ) j="/" ;;
         esac
-        echo && echo -en "\r${COLOR_PRINT_RED}[$j] Waiting for other package manager to finish...${END_COLOR_PRINT}" 
+        echo && echo -en "\r${COLOR_PRINT_RED}[$j] Waiting for other package manager to finish...${END_COLOR_PRINT}"
         sleep 0.25
         ((i=i+1))
     done
     echo -ne "${COLOR_PRINT_YELLOW}Updating Packages List${END_COLOR_PRINT}"
-    sudo apt update -y &>/dev/null
+    sudo apt update -y
     echo -ne "\r${COLOR_PRINT_GREEN}Updating Packages List${END_COLOR_PRINT}"
     echo
 }
@@ -929,12 +940,12 @@ function install_packages()
             2 ) j="|" ;;
             3 ) j="/" ;;
         esac
-        echo && echo -en "\r${COLOR_PRINT_RED}[$j] Waiting for other package manager to finish...${END_COLOR_PRINT}" 
+        echo && echo -en "\r${COLOR_PRINT_RED}[$j] Waiting for other package manager to finish...${END_COLOR_PRINT}"
         sleep 0.25
         ((i=i+1))
     done
     echo -ne "${COLOR_PRINT_YELLOW}Installing Packages (This Might Take A While)${END_COLOR_PRINT}"
-    sudo apt install ${XCASH_DPOPS_PACKAGES} -y &>/dev/null
+    sudo apt install ${XCASH_DPOPS_PACKAGES} -y
     build_libgtest
     echo -ne "\r${COLOR_PRINT_GREEN}Installing Packages (This Might Take A While)${END_COLOR_PRINT}"
     echo
@@ -942,10 +953,10 @@ function install_packages()
 
 function build_libgtest()
 {
-  cd /usr/src/gtest &>/dev/null
-  sudo cmake . &>/dev/null
-  sudo make &>/dev/null
-  sudo mv libg* /usr/lib/ &>/dev/null
+  cd /usr/src/gtest
+  sudo cmake .
+  sudo make
+  sudo mv libg* /usr/lib/
 }
 
 
@@ -971,11 +982,11 @@ function build_xcash()
   echo -ne "${COLOR_PRINT_YELLOW}Building X-CASH (This Might Take A While)${END_COLOR_PRINT}"
   cd "${XCASH_DIR}"
   if [ "$RAM_CPU_RATIO" -ge "$RAM_CPU_RATIO_ALL_CPU_THREADS" ]; then
-    echo "y" | make clean &>/dev/null
-    make release -j "${CPU_THREADS}" &>/dev/null
+    echo "y" | make clean
+    make release -j "${CPU_THREADS}"
   else
-    echo "y" | make clean &>/dev/null
-    make release -j $((CPU_THREADS / 2)) &>/dev/null
+    echo "y" | make clean
+    make release -j $((CPU_THREADS / 2))
   fi
   echo -ne "\r${COLOR_PRINT_GREEN}Building X-CASH (This Might Take A While)${END_COLOR_PRINT}"
   echo
@@ -1006,15 +1017,15 @@ function create_directories()
   echo -ne "${COLOR_PRINT_YELLOW}Creating Directories${END_COLOR_PRINT}"
   if [ ! -d "$XCASH_DPOPS_INSTALLATION_DIR" ]; then
     mkdir -p "${XCASH_DPOPS_INSTALLATION_DIR}"
-  fi 
+  fi
   if [ ! -d "$XCASH_BLOCKCHAIN_INSTALLATION_DIR" ]; then
     mkdir -p "${XCASH_BLOCKCHAIN_INSTALLATION_DIR}"
-  fi 
+  fi
   if [ ! -d "$MONGODB_INSTALLATION_DIR" ]; then
     sudo mkdir -p "${MONGODB_INSTALLATION_DIR}"
     sudo chmod 770 "${MONGODB_INSTALLATION_DIR}"
     sudo chown "$USER" "${MONGODB_INSTALLATION_DIR}"
-  fi 
+  fi
   if [ ! -d "$XCASH_WALLET_DIR" ]; then
     mkdir -p "${XCASH_WALLET_DIR}"
   fi
@@ -1055,9 +1066,9 @@ function install_mongodb()
   echo -ne "${COLOR_PRINT_YELLOW}Installing MongoDB${END_COLOR_PRINT}"
   cd "${XCASH_DPOPS_INSTALLATION_DIR}"
   wget -q ${MONGODB_URL}
-  tar -xf mongodb-linux-x86_64-*.tgz &>/dev/null
-  sudo rm mongodb-linux-x86_64-*.tgz &>/dev/null
-  echo -ne "\nexport PATH=${MONGODB_DIR}bin:" >> "${HOME}"/.profile 
+  tar -xf mongodb-linux-x86_64-*.tgz
+  sudo rm mongodb-linux-x86_64-*.tgz
+  echo -ne "\nexport PATH=${MONGODB_DIR}bin:" >> "${HOME}"/.profile
   echo -ne '$PATH' >> "${HOME}"/.profile
   . "${HOME}"/.profile
   echo -ne "\r${COLOR_PRINT_GREEN}Installing MongoDB${END_COLOR_PRINT}"
@@ -1069,14 +1080,14 @@ function install_mongoc_driver()
   echo -ne "${COLOR_PRINT_YELLOW}Installing MongoC Driver${END_COLOR_PRINT}"
   cd "${XCASH_DPOPS_INSTALLATION_DIR}"
   wget -q ${MONGOC_DRIVER_URL}
-  tar -xf mongo-c-driver-*.tar.gz &>/dev/null
-  sudo rm mongo-c-driver-*.tar.gz &>/dev/null
+  tar -xf mongo-c-driver-*.tar.gz
+  sudo rm mongo-c-driver-*.tar.gz
   cd mongo-c-driver-*
-  mkdir cmake-build &>/dev/null
-  cd cmake-build &>/dev/null
-  sudo cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF .. &>/dev/null
-  sudo make -j "${CPU_THREADS}" &>/dev/null
-  sudo make install &>/dev/null
+  mkdir cmake-build
+  cd cmake-build
+  sudo cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF ..
+  sudo make -j "${CPU_THREADS}"
+  sudo make install
   sudo ldconfig
   echo -ne "\r${COLOR_PRINT_GREEN}Installing MongoC Driver${END_COLOR_PRINT}"
   echo
@@ -1096,11 +1107,11 @@ function build_xcash_dpops()
   echo -ne "${COLOR_PRINT_YELLOW}Building XCASH_DPOPS${END_COLOR_PRINT}"
   cd "${XCASH_DPOPS_DIR}"
   if [ "$RAM_CPU_RATIO" -ge "$RAM_CPU_RATIO_ALL_CPU_THREADS" ]; then
-    echo "y" | make clean &>/dev/null
-    make release -j "${CPU_THREADS}" &>/dev/null
+    echo "y" | make clean
+    make release -j "${CPU_THREADS}"
   else
-    echo "y" | make clean &>/dev/null
-    make release -j $((CPU_THREADS / 2)) &>/dev/null
+    echo "y" | make clean
+    make release -j $((CPU_THREADS / 2))
   fi
   echo -ne "\r${COLOR_PRINT_GREEN}Building XCASH_DPOPS${END_COLOR_PRINT}"
   echo
@@ -1128,8 +1139,8 @@ function install_firewall()
   fi
   sudo chmod +x ${HOME}/firewall_script.sh
   sudo ${HOME}/firewall_script.sh
-  sudo systemctl enable firewall &>/dev/null
-  sudo systemctl start firewall &>/dev/null
+  sudo systemctl enable firewall
+  sudo systemctl start firewall
   echo -ne "\r${COLOR_PRINT_GREEN}Installing The Firewall${END_COLOR_PRINT}"
   echo
 }
@@ -1166,15 +1177,15 @@ function sync_xcash_wallet()
   echo -e "${COLOR_PRINT_GREEN}      Syncing X-CASH Wallet (This Might Take A While)${END_COLOR_PRINT}"
   echo -e "${COLOR_PRINT_GREEN}############################################################${END_COLOR_PRINT}"
 
-  screen -dmS XCASH_RPC_Wallet "${XCASH_DIR}"build/release/bin/xcash-wallet-rpc --wallet-file "${XCASH_DPOPS_INSTALLATION_DIR}"xcash_wallets/XCASH_DPOPS_WALLET --password "${WALLET_PASSWORD}" --rpc-bind-port 18288 --confirm-external-bind --disable-rpc-login --daemon-address usseed1.x-cash.org:18281 --trusted-daemon
-  
+  screen -dmS XCASH_RPC_Wallet "${XCASH_DIR}"build/release/bin/xcash-wallet-rpc --wallet-file "${XCASH_DPOPS_INSTALLATION_DIR}"xcash_wallets/XCASH_DPOPS_WALLET --password "${WALLET_PASSWORD}" --rpc-bind-port 18288 --confirm-external-bind --disable-rpc-login --daemon-address ${DAEMON_SEED} --trusted-daemon
+
    while
-    data=$(curl -s -X POST http://127.0.0.1:18288/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_address"}' -H 'Content-Type: application/json') 
+    data=$(curl -s -X POST http://127.0.0.1:18288/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_address"}' -H 'Content-Type: application/json')
     sleep 10s
     [[ "$data" == "" ]]
   do true; done
 
-  curl -s -X POST http://127.0.0.1:18288/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"stop_wallet"}' -H 'Content-Type: application/json' &>/dev/null
+  curl -s -X POST http://127.0.0.1:18288/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"stop_wallet"}' -H 'Content-Type: application/json'
   sleep 10s
 }
 
@@ -1183,7 +1194,7 @@ function create_xcash_wallet()
   echo -e "${COLOR_PRINT_GREEN}############################################################${END_COLOR_PRINT}"
   echo -e "${COLOR_PRINT_GREEN}      Creating X-CASH Wallet (This Might Take A While)  ${END_COLOR_PRINT}"
   echo -e "${COLOR_PRINT_GREEN}############################################################${END_COLOR_PRINT}"
-  echo "exit" | "${XCASH_DIR}"build/release/bin/xcash-wallet-cli --generate-new-wallet "${XCASH_DPOPS_INSTALLATION_DIR}"xcash_wallets/XCASH_DPOPS_WALLET --password "${WALLET_PASSWORD}" --mnemonic-language English --restore-height 0 --daemon-address usseed1.x-cash.org:18281 &>/dev/null
+  echo "exit" | "${XCASH_DIR}"build/release/bin/xcash-wallet-cli --generate-new-wallet "${XCASH_DPOPS_INSTALLATION_DIR}"xcash_wallets/XCASH_DPOPS_WALLET --password "${WALLET_PASSWORD}" --mnemonic-language English --restore-height 0 --daemon-address ${DAEMON_SEED}
   echo
   echo
 }
@@ -1193,7 +1204,7 @@ function import_xcash_wallet()
   echo -e "${COLOR_PRINT_GREEN}############################################################${END_COLOR_PRINT}"
   echo -e "${COLOR_PRINT_GREEN}     Importing X-CASH Wallet (This Might Take A While) ${END_COLOR_PRINT}"
   echo -e "${COLOR_PRINT_GREEN}############################################################${END_COLOR_PRINT}"
-  (echo -ne "\n"; echo "${WALLET_PASSWORD}"; echo "exit") | "${XCASH_DIR}"build/release/bin/xcash-wallet-cli --restore-deterministic-wallet --electrum-seed "${WALLET_SEED}" --generate-new-wallet "${XCASH_DPOPS_INSTALLATION_DIR}"xcash_wallets/XCASH_DPOPS_WALLET --password "${WALLET_PASSWORD}" --mnemonic-language English --restore-height 0 --daemon-address usseed1.x-cash.org:18281 &>/dev/null
+  (echo -ne "\n"; echo "${WALLET_PASSWORD}"; echo "exit") | "${XCASH_DIR}"build/release/bin/xcash-wallet-cli --restore-deterministic-wallet --electrum-seed "${WALLET_SEED}" --generate-new-wallet "${XCASH_DPOPS_INSTALLATION_DIR}"xcash_wallets/XCASH_DPOPS_WALLET --password "${WALLET_PASSWORD}" --mnemonic-language English --restore-height 0 --daemon-address ${DAEMON_SEED}
   echo
   echo
 }
@@ -1212,9 +1223,9 @@ function install_nodejs()
   echo -ne "${COLOR_PRINT_YELLOW}Installing Node.js${END_COLOR_PRINT}"
   cd "${XCASH_DPOPS_INSTALLATION_DIR}"
   wget -q ${NODEJS_URL}
-  tar -xf node*.tar.xz &>/dev/null
-  sudo rm node*.tar.xz &>/dev/null
-  echo -ne "\nexport PATH=${NODEJS_DIR}bin:" >> "${HOME}"/.profile 
+  tar -xf node*.tar.xz
+  sudo rm node*.tar.xz
+  echo -ne "\nexport PATH=${NODEJS_DIR}bin:" >> "${HOME}"/.profile
   echo -ne '$PATH' >> "${HOME}"/.profile
   . "${HOME}"/.profile
   echo -ne "\r${COLOR_PRINT_GREEN}Installing Node.js${END_COLOR_PRINT}"
@@ -1225,8 +1236,8 @@ function configure_npm()
 {
   if [ "$EUID" -eq 0 ]; then
     echo -ne "${COLOR_PRINT_YELLOW}Configuring NPM For Root User${END_COLOR_PRINT}"
-    npm config set user 0 &>/dev/null
-    npm config set unsafe-perm true &>/dev/null
+    npm config set user 0
+    npm config set unsafe-perm true
     echo -ne "\r${COLOR_PRINT_GREEN}Configuring NPM For Root User${END_COLOR_PRINT}"
     echo
   fi
@@ -1235,7 +1246,7 @@ function configure_npm()
 function update_npm()
 {
   echo -ne "${COLOR_PRINT_YELLOW}Updating NPM${END_COLOR_PRINT}"
-  npm install -g npm &>/dev/null
+  npm install -g npm
   echo -ne "\r${COLOR_PRINT_GREEN}Updating NPM${END_COLOR_PRINT}"
   echo
 }
@@ -1243,7 +1254,7 @@ function update_npm()
 function install_npm_global_packages()
 {
   echo -ne "${COLOR_PRINT_YELLOW}Installing Global NPM Packages${END_COLOR_PRINT}"
-  npm install -g @angular/cli@latest uglify-js &>/dev/null
+  npm install -g @angular/cli@latest uglify-js
   echo -ne "\r${COLOR_PRINT_GREEN}Installing Global NPM Packages${END_COLOR_PRINT}"
   echo
 }
@@ -1261,7 +1272,7 @@ function install_shared_delegates_website_npm_packages()
 {
   echo -ne "${COLOR_PRINT_YELLOW}Updating node_modules${END_COLOR_PRINT}"
   cd "${SHARED_DELEGATES_WEBSITE_DIR}"
-  npm update &>/dev/null
+  npm update
   echo -ne "\r${COLOR_PRINT_GREEN}Updating node_modules${END_COLOR_PRINT}"
   echo
 }
@@ -1271,14 +1282,14 @@ function build_shared_delegates_website()
   echo -ne "${COLOR_PRINT_YELLOW}Building shared delegates website${END_COLOR_PRINT}"
   cd "${SHARED_DELEGATES_WEBSITE_DIR}"
   . "${HOME}"/.profile
-  npm run build &>/dev/null
+  npm run build
   cd dist
   for f in *.js; do uglifyjs "$f" --compress --mangle --output "{$f}min"; rm "$f"; mv "{$f}min" "$f"; done
   if [ -d "$XCASH_DPOPS_SHARED_DELEGATE_FOLDER_DIR" ]; then
     sudo rm -r "${XCASH_DPOPS_SHARED_DELEGATE_FOLDER_DIR}"
-  fi 
+  fi
   cd ../
-  cp -a dist "${XCASH_DPOPS_SHARED_DELEGATE_FOLDER_DIR}" 
+  cp -a dist "${XCASH_DPOPS_SHARED_DELEGATE_FOLDER_DIR}"
   echo -ne "\r${COLOR_PRINT_GREEN}Building shared delegates website${END_COLOR_PRINT}"
   echo
 }
@@ -1376,12 +1387,12 @@ function update_packages()
             2 ) j="|" ;;
             3 ) j="/" ;;
         esac
-        echo && echo -en "\r${COLOR_PRINT_RED}[$j] Waiting for other package manager to finish...${END_COLOR_PRINT}" 
+        echo && echo -en "\r${COLOR_PRINT_RED}[$j] Waiting for other package manager to finish...${END_COLOR_PRINT}"
         sleep 0.25
         ((i=i+1))
     done
     echo -ne "${COLOR_PRINT_YELLOW}Updating Packages${END_COLOR_PRINT}"
-    sudo apt install --only-upgrade ${XCASH_DPOPS_PACKAGES} -y &>/dev/null
+    sudo apt install --only-upgrade ${XCASH_DPOPS_PACKAGES} -y
     echo -ne "\r${COLOR_PRINT_GREEN}Updating Packages${END_COLOR_PRINT}"
     echo
 }
@@ -1399,12 +1410,12 @@ function update_xcash()
     git reset --hard HEAD --quiet
     git pull --quiet
     if [ "$RAM_CPU_RATIO" -ge "$RAM_CPU_RATIO_ALL_CPU_THREADS" ]; then
-      echo "y" | make clean &>/dev/null
-      make release -j "${CPU_THREADS}" &>/dev/null
+      echo "y" | make clean
+      make release -j "${CPU_THREADS}"
     else
-      echo "y" | make clean &>/dev/null
-      make release -j $((CPU_THREADS / 2)) &>/dev/null
-    fi 
+      echo "y" | make clean
+      make release -j $((CPU_THREADS / 2))
+    fi
   fi
   echo -ne "\r${COLOR_PRINT_GREEN}Updating X-CASH (This Might Take A While)${END_COLOR_PRINT}"
   echo
@@ -1423,11 +1434,11 @@ function update_xcash_dpops()
     git reset --hard HEAD --quiet
     git pull --quiet
     if [ "$RAM_CPU_RATIO" -ge "$RAM_CPU_RATIO_ALL_CPU_THREADS" ]; then
-      echo "y" | make clean &>/dev/null
-      make release -j "${CPU_THREADS}" &>/dev/null
+      echo "y" | make clean
+      make release -j "${CPU_THREADS}"
     else
-      echo "y" | make clean &>/dev/null
-      make release -j $((CPU_THREADS / 2)) &>/dev/null
+      echo "y" | make clean
+      make release -j $((CPU_THREADS / 2))
     fi
   fi
   echo -ne "\r${COLOR_PRINT_GREEN}Updating XCASH_DPOPS${END_COLOR_PRINT}"
@@ -1446,14 +1457,14 @@ function update_shared_delegates_website()
   if [ "$data" == "0" ]; then
     git reset --hard HEAD --quiet
     git pull --quiet
-    npm update &>/dev/null
+    npm update
     . "${HOME}"/.profile
-    npm run build &>/dev/null
+    npm run build
     cd dist
     for f in *.js; do uglifyjs "$f" --compress --mangle --output "{$f}min"; rm "$f"; mv "{$f}min" "$f"; done
     if [ -d "$XCASH_DPOPS_SHARED_DELEGATE_FOLDER_DIR" ]; then
       sudo rm -r "${XCASH_DPOPS_SHARED_DELEGATE_FOLDER_DIR}"
-    fi 
+    fi
     cd ../
     cp -a dist "${XCASH_DPOPS_SHARED_DELEGATE_FOLDER_DIR}"
   fi
@@ -1464,18 +1475,18 @@ function update_shared_delegates_website()
 function update_mongodb()
 {
   echo -ne "${COLOR_PRINT_YELLOW}Updating MongoDB${END_COLOR_PRINT}"
-  sudo rm -r "${MONGODB_DIR}"  
+  sudo rm -r "${MONGODB_DIR}"
   cd "${XCASH_DPOPS_INSTALLATION_DIR}"
   wget -q ${MONGODB_URL}
-  tar -xf mongodb-linux-x86_64-*.tgz &>/dev/null
-  sudo rm mongodb-linux-x86_64-*.tgz &>/dev/null
+  tar -xf mongodb-linux-x86_64-*.tgz
+  sudo rm mongodb-linux-x86_64-*.tgz
   MONGODB_DIR=$(sudo find / -path /sys -prune -o -path /proc -prune -o -path /dev -prune -o -path /var -prune -o -type d -name "mongodb-linux-x86_64-ubuntu1804-*" -print)/
   update_systemd_service_files
   sudo bash -c "echo '${SYSTEMD_SERVICE_FILE_MONGODB}' > /lib/systemd/system/MongoDB.service"
   sudo systemctl daemon-reload
   sudo sed '/mongodb-linux-x86_64-ubuntu1804-/d' -i "${HOME}"/.profile
   sudo sed '/^[[:space:]]*$/d' -i "${HOME}"/.profile
-  echo -ne "\nexport PATH=${MONGODB_DIR}bin:" >> "${HOME}"/.profile 
+  echo -ne "\nexport PATH=${MONGODB_DIR}bin:" >> "${HOME}"/.profile
   echo -ne '$PATH' >> "${HOME}"/.profile
   sudo sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' -i "${HOME}"/.profile
   . "${HOME}"/.profile
@@ -1489,14 +1500,14 @@ function update_mongoc_driver()
   cd "${XCASH_DPOPS_INSTALLATION_DIR}"
   sudo rm -r "${MONGOC_DRIVER_DIR}"
   wget -q ${MONGOC_DRIVER_URL}
-  tar -xf mongo-c-driver-*.tar.gz &>/dev/null
-  sudo rm mongo-c-driver-*.tar.gz &>/dev/null
+  tar -xf mongo-c-driver-*.tar.gz
+  sudo rm mongo-c-driver-*.tar.gz
   cd mongo-c-driver-*
   mkdir cmake-build
   cd cmake-build
-  cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF .. &>/dev/null
-  sudo make -j "${CPU_THREADS}" &>/dev/null
-  sudo make install &>/dev/null
+  cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF ..
+  sudo make -j "${CPU_THREADS}"
+  sudo make install
   sudo ldconfig
   MONGOC_DRIVER_DIR=$(sudo find / -path /sys -prune -o -path /proc -prune -o -path /dev -prune -o -path /var -prune -o -type d -name "mongo-c-driver-*" -print)/
   echo -ne "\r${COLOR_PRINT_GREEN}Updating Mongo C Driver${END_COLOR_PRINT}"
@@ -1506,16 +1517,16 @@ function update_mongoc_driver()
 function update_nodejs()
 {
   echo -ne "${COLOR_PRINT_YELLOW}Updating NodeJS${END_COLOR_PRINT}"
-  sudo rm -r "${NODEJS_DIR}"  
+  sudo rm -r "${NODEJS_DIR}"
   cd "${XCASH_DPOPS_INSTALLATION_DIR}"
   wget -q ${NODEJS_URL}
-  tar -xf node*.tar.xz &>/dev/null
-  sudo rm node*.tar.xz &>/dev/null
+  tar -xf node*.tar.xz
+  sudo rm node*.tar.xz
   NODEJS_DIR=$(sudo find / -path /sys -prune -o -path /proc -prune -o -path /dev -prune -o -path /var -prune -o -type d -name "node-*-linux-x64" -print)/
   sudo sed '/node-v/d' -i "${HOME}"/.profile
   sudo sed '/PATH=\/bin:/d' -i "${HOME}"/.profile
   sudo sed '/^[[:space:]]*$/d' -i "${HOME}"/.profile
-  echo -ne "\nexport PATH=${NODEJS_DIR}bin:" >> "${HOME}"/.profile 
+  echo -ne "\nexport PATH=${NODEJS_DIR}bin:" >> "${HOME}"/.profile
   echo -ne '$PATH' >> "${HOME}"/.profile
   sudo sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' -i "${HOME}"/.profile
   . "${HOME}"/.profile
@@ -1553,12 +1564,12 @@ function uninstall_packages()
             2 ) j="|" ;;
             3 ) j="/" ;;
         esac
-        echo && echo -en "\r${COLOR_PRINT_RED}[$j] Waiting for other package manager to finish...${END_COLOR_PRINT}" 
+        echo && echo -en "\r${COLOR_PRINT_RED}[$j] Waiting for other package manager to finish...${END_COLOR_PRINT}"
         sleep 0.25
         ((i=i+1))
     done
     echo -ne "${COLOR_PRINT_YELLOW}Uninstalling Packages${END_COLOR_PRINT}"
-    sudo apt --purge remove "${XCASH_DPOPS_PACKAGES}" -y &>/dev/null
+    sudo apt --purge remove "${XCASH_DPOPS_PACKAGES}" -y
     echo -ne "\r${COLOR_PRINT_GREEN}Uninstalling Packages${END_COLOR_PRINT}"
     echo
 }
@@ -1624,7 +1635,7 @@ function install()
 
   # Update the package list
   update_packages_list
- 
+
   # Install packages
   install_packages
 
@@ -1656,15 +1667,15 @@ function install()
   get_current_xcash_wallet_data
 
   # test change the xcash-core to xcash_proof_of_stake branch
-  systemctl stop XCASH_DPOPS
+  sudo systemctl stop XCASH_DPOPS
   cd "${XCASH_DIR}"
   git checkout --quiet xcash_proof_of_stake
   if [ "$RAM_CPU_RATIO" -ge "$RAM_CPU_RATIO_ALL_CPU_THREADS" ]; then
-    echo "y" | make clean &>/dev/null
-    make release -j "${CPU_THREADS}" &>/dev/null
+    echo "y" | make clean
+    make release -j "${CPU_THREADS}"
   else
-    echo "y" | make clean &>/dev/null
-    make release -j $((CPU_THREADS / 2)) &>/dev/null
+    echo "y" | make clean
+    make release -j $((CPU_THREADS / 2))
   fi
 
   # Create a swap file if they dont already have one and have low ram
@@ -1676,7 +1687,7 @@ function install()
   # Start the systemd service files
   start_systemd_service_files
 
-  # Display X-CASH current wallet data  
+  # Display X-CASH current wallet data
   echo
   echo
   echo -e "${COLOR_PRINT_GREEN}############################################################${END_COLOR_PRINT}"
@@ -1793,9 +1804,9 @@ function uninstall()
   # Uninstall Systemd Service Files
   uninstall_systemd_service_files
 
-  # Uninstall the Mongo C Driver  
+  # Uninstall the Mongo C Driver
   echo -ne "${COLOR_PRINT_YELLOW}Uninstalling Mongo C Driver${END_COLOR_PRINT}"
-  sudo /usr/local/share/mongo-c-driver/uninstall.sh  &>/dev/null
+  sudo /usr/local/share/mongo-c-driver/uninstall.sh
   sudo ldconfig
   echo -ne "\r${COLOR_PRINT_GREEN}Uninstalling Mongo C Driver${END_COLOR_PRINT}"
   echo
@@ -1825,8 +1836,8 @@ function uninstall()
   echo
   echo
   echo -e "${COLOR_PRINT_YELLOW}Make sure to run source ~/.profile in your terminal${END_COLOR_PRINT}"
-  
-  # Display X-CASH current wallet data  
+
+  # Display X-CASH current wallet data
   echo
   echo
   echo -e "${CURRENT_XCASH_WALLET_INFORMATION}"
@@ -1852,17 +1863,17 @@ function test_update()
   sudo systemctl stop XCASH_Daemon
   sleep 30s
   if [ $data -ne 0 ]; then
-    "${XCASH_DIR}"build/release/bin/xcash-blockchain-import --data-dir "${XCASH_BLOCKCHAIN_INSTALLATION_DIR}" --pop-blocks ${data} &>/dev/null
+    "${XCASH_DIR}"build/release/bin/xcash-blockchain-import --data-dir "${XCASH_BLOCKCHAIN_INSTALLATION_DIR}" --pop-blocks ${data}
   fi
   echo -ne "\r${COLOR_PRINT_GREEN}Resetting the Blockchain${END_COLOR_PRINT}"
   echo
   echo -ne "${COLOR_PRINT_YELLOW}Resetting the Database${END_COLOR_PRINT}"
-  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.reserve_bytes_1.drop()"; echo "exit";) | mongo &>/dev/null
-  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.reserve_bytes_2.drop()"; echo "exit";) | mongo &>/dev/null
-  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.reserve_bytes_3.drop()"; echo "exit";) | mongo &>/dev/null
-  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.reserve_bytes_4.drop()"; echo "exit";) | mongo &>/dev/null
-  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.reserve_bytes_5.drop()"; echo "exit";) | mongo &>/dev/null
-  (echo "use XCASH_PROOF_OF_STAKE_DELEGATES"; echo "db.dropDatabase()"; echo "exit";) | mongo &>/dev/null
+  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.reserve_bytes_1.drop()"; echo "exit";) | mongo
+  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.reserve_bytes_2.drop()"; echo "exit";) | mongo
+  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.reserve_bytes_3.drop()"; echo "exit";) | mongo
+  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.reserve_bytes_4.drop()"; echo "exit";) | mongo
+  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.reserve_bytes_5.drop()"; echo "exit";) | mongo
+  (echo "use XCASH_PROOF_OF_STAKE_DELEGATES"; echo "db.dropDatabase()"; echo "exit";) | mongo
   echo -ne "\r${COLOR_PRINT_GREEN}Resetting the Database${END_COLOR_PRINT}"
   echo
   update
@@ -1884,13 +1895,13 @@ function test_update_reset_delegates()
   echo "${XCASH_BLOCKCHAIN_INSTALLATION_DIR}"
   echo ${data}
   if [ $data -ne 0 ]; then
-    "${XCASH_DIR}"build/release/bin/xcash-blockchain-import --data-dir "${XCASH_BLOCKCHAIN_INSTALLATION_DIR}" --pop-blocks ${data} &>/dev/null
+    "${XCASH_DIR}"build/release/bin/xcash-blockchain-import --data-dir "${XCASH_BLOCKCHAIN_INSTALLATION_DIR}" --pop-blocks ${data}
   fi
   echo -ne "\r${COLOR_PRINT_GREEN}Resetting the Blockchain${END_COLOR_PRINT}"
   echo
   echo -ne "${COLOR_PRINT_YELLOW}Resetting the Database${END_COLOR_PRINT}"
-  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.dropDatabase()"; echo "exit";) | mongo &>/dev/null
-  (echo "use XCASH_PROOF_OF_STAKE_DELEGATES"; echo "db.dropDatabase()"; echo "exit";) | mongo &>/dev/null
+  (echo "use XCASH_PROOF_OF_STAKE"; echo "db.dropDatabase()"; echo "exit";) | mongo
+  (echo "use XCASH_PROOF_OF_STAKE_DELEGATES"; echo "db.dropDatabase()"; echo "exit";) | mongo
   echo -ne "\r${COLOR_PRINT_GREEN}Resetting the Database${END_COLOR_PRINT}"
   echo
   update
@@ -1903,8 +1914,8 @@ function install_firewall_script()
   echo "$FIREWALL" > ${HOME}/firewall_script.sh
   sudo chmod +x ${HOME}/firewall_script.sh
   sudo ${HOME}/firewall_script.sh
-  sudo systemctl enable firewall &>/dev/null
-  sudo systemctl start firewall &>/dev/null
+  sudo systemctl enable firewall
+  sudo systemctl start firewall
   echo -ne "\r${COLOR_PRINT_GREEN}Installing The Firewall${END_COLOR_PRINT}"
   echo
 }
@@ -1916,8 +1927,8 @@ function install_firewall_script_shared_delegates()
   echo "$FIREWALL_SHARED_DELEGATES" > ${HOME}/firewall_script.sh
   sudo chmod +x ${HOME}/firewall_script.sh
   sudo ${HOME}/firewall_script.sh
-  sudo systemctl enable firewall &>/dev/null
-  sudo systemctl start firewall &>/dev/null
+  sudo systemctl enable firewall
+  sudo systemctl start firewall
   echo -ne "\r${COLOR_PRINT_GREEN}Installing The Firewall${END_COLOR_PRINT}"
   echo
 }
@@ -1929,8 +1940,8 @@ function install_firewall_script_test()
   echo "$FIREWALL_TEST" > ${HOME}/firewall_script.sh
   sudo chmod +x ${HOME}/firewall_script.sh
   sudo ${HOME}/firewall_script.sh
-  sudo systemctl enable firewall &>/dev/null
-  sudo systemctl start firewall &>/dev/null
+  sudo systemctl enable firewall
+  sudo systemctl start firewall
   echo -ne "\r${COLOR_PRINT_GREEN}Installing The Firewall${END_COLOR_PRINT}"
   echo
 }
@@ -1944,7 +1955,7 @@ function install_or_update_blockchain()
   XCASH_BLOCKCHAIN_INSTALLATION_DIR="/root/.X-CASH/"
   fi
   wget -q http://94.130.59.172/xcash-blockchain.7z
-  7z x xcash-blockchain.7z -o${XCASH_BLOCKCHAIN_INSTALLATION_DIR} &>/dev/null
+  7z x xcash-blockchain.7z -o${XCASH_BLOCKCHAIN_INSTALLATION_DIR}
   cd ${XCASH_BLOCKCHAIN_INSTALLATION_DIR}
   cp -a .X-CASH/* ./
   rm -r .X-CASH
@@ -1960,7 +1971,7 @@ function install_blockchain()
     echo -ne "${COLOR_PRINT_YELLOW}Installing The BlockChain (This Might Take a While)${END_COLOR_PRINT}"
     cd $HOME
     wget -q http://94.130.59.172/xcash-blockchain.7z
-    7z x xcash-blockchain.7z -o${XCASH_BLOCKCHAIN_INSTALLATION_DIR} &>/dev/null
+    7z x xcash-blockchain.7z -o${XCASH_BLOCKCHAIN_INSTALLATION_DIR}
     cd ${XCASH_BLOCKCHAIN_INSTALLATION_DIR}
     cp -a .X-CASH/* ./
     rm -r .X-CASH
@@ -1982,7 +1993,7 @@ function edit_shared_delegate_settings()
       echo
       [[ ! $DPOPS_FEE =~ $regex_DPOPS_FEE ]]
     do true; done
-    
+
   while
     echo -ne "${COLOR_PRINT_YELLOW}Shared Delegate Minimum Payment Amount, minimum is 10K, maximum is 10M (ex: 10000 in whole numbers and not atomic units etc): ${END_COLOR_PRINT}"
     read -r DPOPS_MINIMUM_AMOUNT
@@ -1992,8 +2003,8 @@ function edit_shared_delegate_settings()
   do true; done
 
   echo -ne "${COLOR_PRINT_YELLOW}Updating Shared Delegate Settings${END_COLOR_PRINT}"
-  sed -i "s/--fee.*--minimum_amount/--fee $DPOPS_FEE --minimum_amount/g" /lib/systemd/system/XCASH_DPOPS.service
-  sed -i "s/--minimum_amount.*/--minimum_amount $DPOPS_MINIMUM_AMOUNT/g" /lib/systemd/system/XCASH_DPOPS.service
+  sudo sed -i "s/--fee.*--minimum_amount/--fee $DPOPS_FEE --minimum_amount/g" /lib/systemd/system/XCASH_DPOPS.service
+  sudo sed -i "s/--minimum_amount.*/--minimum_amount $DPOPS_MINIMUM_AMOUNT/g" /lib/systemd/system/XCASH_DPOPS.service
   echo -ne "\r${COLOR_PRINT_GREEN}Updating Shared Delegate Settings${END_COLOR_PRINT}"
   echo
   else
@@ -2008,10 +2019,10 @@ function create_swap_file()
   cd $HOME
   sudo fallocate -l ${RAM}G /swapfile
   sudo chmod 600 /swapfile
-  sudo mkswap /swapfile &>/dev/null
+  sudo mkswap /swapfile
   sudo swapon /swapfile
-  echo "/swapfile swap swap defaults 0 0" | sudo tee -a /etc/fstab &>/dev/null
-  sudo sysctl -w vm.swappiness=1 &>/dev/null
+  echo "/swapfile swap swap defaults 0 0" | sudo tee -a /etc/fstab
+  sudo sysctl -w vm.swappiness=1
   echo -ne "\r${COLOR_PRINT_GREEN}Creating Swap File${END_COLOR_PRINT}"
   echo
 }
